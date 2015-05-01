@@ -1,0 +1,273 @@
+// Scripts from here - http://www.lexjansen.com/sesug/2013/JMP-01.pdf
+
+
+
+// These are the arrows of association
+h = Associative Array();
+h[1] = Associative Array( {2, 5, 6, 7, 8} );
+h[2] = Associative Array( {3, 5, 7, 8} );
+h[3] = Associative Array( {1, 8} );
+h[4] = Associative Array( {3, 8} );
+h[5] = Associative Array( {3, 4, 7, 8} );
+h[6] = Associative Array( {2, 3, 5, 7, 8} );
+h[7] = Associative Array( {3, 4, 8} );
+h[8] = Associative Array( {} );
+
+
+
+dfs = Function( {ref, node, visited},
+	Local( {chnode, tmp},
+		Write( "Node: " || Char( node ) || ", " || Char( ref[node] << get contents ) || "\!N" );
+		visited[node] = 1;
+		tmp = ref[node];
+		chnode = tmp << first;
+		While( !Is Missing( chnode ),
+			If( !visited[chnode],
+				visited = Recurse( ref, chnode, visited )
+			);
+			chnode = tmp << next( chnode );
+		);
+		visited;
+	)
+);
+dfs( h, 1, J( N Items( h << get keys ), 1, 0 ) );
+
+/* nodecolor assigns pen colors based on strength of relationships
+connecting source nodes (i) and and target nodes (edge) where
+"red"=very strong, "blue"=medium, "black"=weak or equal
+*/
+
+
+//here is where the node color is defined - need to build this expression dynamically... hmm...
+
+nodecolor = Expr(
+	If(
+		i == 1 & edge == 2, "Red",
+		i == 1 & edge == 5, "Red",
+		i == 1 & edge == 6, "Black",
+		i == 1 & edge == 7, "Black",
+		i == 1 & edge == 8, "Black",
+		i == 2 & edge == 3, "Blue",
+		i == 2 & edge == 5, "Black",
+		i == 2 & edge == 7, "Black",
+		i == 2 & edge == 8, "Blue",
+		i == 3 & edge == 1, "Blue",
+		i == 3 & edge == 8, "Blue",
+		i == 4 & edge == 3, "Blue",
+		i == 4 & edge == 8, "Blue",
+		i == 5 & edge == 3, "Blue",
+		i == 5 & edge == 4, "Blue",
+		i == 5 & edge == 7, "Black",
+		i == 5 & edge == 8, "Blue",
+		i == 6 & edge == 2, "Blue",
+		i == 6 & edge == 3, "Blue",
+		i == 6 & edge == 5, "Blue",
+		i == 6 & edge == 7, "Black",
+		i == 6 & edge == 8, "Blue",
+		i == 7 & edge == 3, "Black",
+		i == 7 & edge == 4, "Black",
+		i == 7 & edge == 8, "Black",
+		"Black"
+	)
+);
+
+
+
+/* linesty assigns line styles based on strength of relationships
+connecting source nodes (i) and and target nodes (edge) where
+"Dashed"=very strong, "Dotted"=medium, "Solid"=weak or equal
+*/
+
+//here is where the line style is defined
+
+linesty = Expr(
+	If(
+		i == 1 & edge == 2, "Dashed",
+		i == 1 & edge == 5, "Dashed",
+		i == 1 & edge == 6, "Solid",
+		i == 1 & edge == 7, "Solid",
+		i == 1 & edge == 8, "Solid",
+		i == 2 & edge == 3, "Dotted",
+		i == 2 & edge == 5, "Solid",
+		i == 2 & edge == 7, "Solid",
+		i == 2 & edge == 8, "Dotted",
+		i == 3 & edge == 1, "Dotted",
+		i == 3 & edge == 8, "Dotted",
+		i == 4 & edge == 3, "Dotted",
+		i == 4 & edge == 8, "Dotted",
+		i == 5 & edge == 3, "Dotted",
+		i == 5 & edge == 4, "Dotted",
+		i == 5 & edge == 7, "Solid",
+		i == 5 & edge == 8, "Dotted",
+		i == 6 & edge == 2, "Dotted",
+		i == 6 & edge == 3, "Dotted",
+		i == 6 & edge == 5, "Dotted",
+		i == 6 & edge == 7, "Solid",
+		i == 6 & edge == 8, "Dotted",
+		i == 7 & edge == 3, "Solid",
+		i == 7 & edge == 4, "Solid",
+		i == 7 & edge == 8, "Solid",
+		"Solid"
+	)
+);
+fillclr = Expr( "Yellow" );
+
+
+
+idplot = Expr(
+	Graph Box(
+		Frame Size( 300, 300 ),
+		X Scale( -1.5, 1.5 ),
+		Y Scale( -1.5, 1.5 ),
+		Local( {n = N Items( h ), k = 2 * Pi() / n, r, i, pt, from, to, edge, v, d},
+			Line Style( 0 );
+			Pen Size( 3 );
+			r = 1 / (n + 2);
+			For( i = 1, i <= n, i++,
+				pt = Eval List( {Cos( k * i ), Sin( k * i )} );
+				edges = h[i];
+				For( edge = edges << first, !Is Empty( edge ), edge = edges << Next( edge ),
+					to = Eval List( {Cos( k * edge ), Sin( k * edge )} );
+					If( i == edge,
+						Circle( Eval List( 1.2 * pt ), 0.9 * r ), // else
+						v = pt - to;
+						d = Sqrt( Sum( v * v ) );
+						{from, to} = Eval List(
+							{pt * (d - r) / d + to * r / d, pt * r / d + to * (d - r) / d}
+						);
+						Pen Color( nodecolor );
+						Line Style( linesty );
+						Arrow( from, to );
+					);
+				);
+				Fill Color( fillclr );
+				Circle( pt, r, "fill" );
+				Text( Center Justified, pt - {0, 0.05}, Char( i ) );
+			);
+		)
+	)
+);
+
+
+
+
+// Interrelationship Digraph
+// Matrix Format
+// input matrix of in arrows(-1),
+//out arrows(+1), and no arrows(0)
+interrelations_digraph = Expr(
+// initialize sumin and sumout vectors
+	sumin = J( 1, N Row( k ), 0 );
+	sumout = J( 1, N Row( k ), 0 );
+// compute sumin(-1) and sumout (+1) vectors
+	sumin = (V Sum( (k < 0)` ))`;
+	sumout = (V Sum( (k > 0)` ))`;
+// compute strength vector c
+	c = Vec Diag( Abs( k ) * w );
+// concatenate ins, outs, and strength vectors
+	//in idmatrix
+	idmatrix = sumin || sumout || c;
+//concatenate k and idmatrix into fullmatrx
+	fullmatrx = k || idmatrix;
+);
+
+
+
+k = [0 1 -1 0 1 1 1 1,
+-1 0 1 0 1 -1 1 1,
+1 -1 0 -1 -1 -1 -1 1,
+0 0 1 0 -1 0 -1 1,
+-1 -1 1 1 0 -1 1 1,
+-1 1 1 0 1 0 1 1,
+-1 -1 1 1 -1 -1 0 1,
+-1 -1 -1 -1 -1 -1 -1 0];
+// create strength of relationship matrix
+//(0 = no relationship), (1= weak or equal relationship),
+// (3= medium relationship),(9= strong relationship)
+w = [0 9 3 0 9 1 1 1,
+9 0 3 0 1 3 1 3,
+3 3 0 3 3 3 1 3,
+0 0 3 0 3 0 1 3,
+9 1 3 3 0 3 1 3,
+1 3 3 0 3 0 1 3,
+1 1 1 1 1 1 0 1,
+1 3 3 3 3 3 1 0];
+rnames = {"1.Familiar with online process", "2.Accessible to connect without difficulty",
+"3.Time it takes to create account", "4.Number of steps to complete registration",
+"5.Able to follow clear online directions", "6.Conditions when access was made(workbreak, time of day, etc.)",
+"7.Keyboard entry, number of keystrokes, etc.", "8.Account confirmation status"};
+cnames = {"1", "2", "3", "4", "5", "6", "7", "8", "Ins(-1)", "Outs(+1)", "Strength"};
+interrelations_digraph;
+
+
+
+//copy data table or matrix to the report window as a display box
+dt2rptb = Expr(
+// ncbx is the expression to interatively create number column boxes
+	// for the output display
+	ncbx = Expr(
+		Number Col Box( cnames[i], fullmatrx[0, i] )
+	);
+	n = N Items( cnames ); /* count the number of matrix items */
+	nwdw = New Window( "Table Matrix",
+		Outline Box( "Interrelationship Digraph Matrix Format" ),
+		Table Box(
+			String Col Box( "Criteria", rnames ),
+			hb = H List Box( Text Box( "" ) ),
+			For( i = 1, i <= n, i++,
+				hb << append( ncbx )
+			)
+		)
+	);
+);
+
+
+
+/*******************************************************
+Append the Digraph, Legend, and Matrix objects into the
+Combination ID/Matrix format window
+*******************************************************/
+idwdw = New Window(
+	"Online Account Interrelations Digraph: Factors Affecting Successful Online Accouint Creation",
+	H List Box(
+		Outline Box( "Directed Graph-Traditional Format", Idplot ),
+		Outline Box( "",
+			Table Box(
+				String Col Box( "Legend", rnames ),
+				V List Box(
+					Text Box( " " ),
+					Text Box( " Relationship Strength:", <<Font Color( "Black" ) ),
+					Text Box( " Dashed Red: Very Strong Relationship (Strength=9)", <<Font Color( "Red" ) ),
+					Text Box( " Dotted Blue: Medium Relationship (Strength=3)", <<Font Color( "Blue" ) ),
+					Text Box(
+						" Solid Black: Weak or Equal Relationship (Strength=1)",
+						<<Font Color( "Black" )
+					),
+					Text Box( " " ),
+					Text Box( " Notes:" ),
+					Text Box(
+						" Familiarity with online process(1) was a very strong driver to",
+						<<Font Color( "Black" )
+					),
+					Text Box(
+						" having Accessibilty to connect without difficulty(2), and Able",
+						<<Font Color( "Black" )
+					),
+					Text Box(
+						" to follow clear directions(5). Account confirmation status(8)",
+						<<Font Color( "Black" )
+					),
+					Text Box(
+						" was the key indicator with the most incoming arrows.",
+						<<Font Color( "Black" )
+					)
+				)
+			)
+		)
+	),
+	dt2rptb
+);
+/* adjust the frame box line width scales so that arrows look more like dashes and dots in the idwdw object */
+idwdw[framebox( 1 )] << Line Width Scale( 0.67 );
+
+
